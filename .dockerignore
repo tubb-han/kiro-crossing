@@ -1,0 +1,41 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Node modules (if any)
+node_modules
+npm-debug.log
+
+# Test files
+test-*.sh
+test-setup.sh
+
+# Build and run scripts
+build.sh
+run.sh
+stop.sh
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+.kiro
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
