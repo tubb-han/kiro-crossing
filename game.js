@@ -9,6 +9,9 @@ const ROWS = canvas.height / TILE_SIZE;
 // High score (persisted in localStorage)
 let highScore = parseInt(localStorage.getItem('ghostCrossingHighScore')) || 0;
 
+// Game paused until start button clicked
+let gamePaused = true;
+
 // Game state
 let gameState = {
     lives: 3,
@@ -197,6 +200,7 @@ function checkGoalReached() {
         }
     }
     // Hit top but not in goal zone
+    playDeathSound();
     gameState.lives--;
     gameState.showingDeath = true;
     gameState.deathTimer = 30; // Show animation for ~0.5 seconds at 60fps
@@ -275,6 +279,7 @@ function checkCollisions() {
             
             if (playerRight > obsLeft && playerLeft < obsRight) {
                 // Collision detected
+                playDeathSound();
                 gameState.lives--;
                 gameState.showingDeath = true;
                 gameState.deathTimer = 30; // Show animation for ~0.5 seconds at 60fps
@@ -792,7 +797,9 @@ function draw() {
 
 // Game loop
 function gameLoop() {
-    update();
+    if (!gamePaused) {
+        update();
+    }
     draw();
     requestAnimationFrame(gameLoop);
 }
@@ -820,11 +827,82 @@ document.getElementById('restartBtn').addEventListener('click', () => {
 const musicBtn = document.getElementById('musicBtn');
 let musicPlaying = false;
 let audioContext = null;
-let oscillators = [];
-let gainNodes = [];
-let pulseInterval = null;
+let melodyInterval = null;
+let currentNoteIndex = 0;
 
-function createSpookyMusic() {
+// Ominous whistling melody - like wind through a haunted house
+const melody = [
+    { note: 440.00, duration: 0.8 },  // A4 (long, eerie)
+    { note: 466.16, duration: 0.4 },  // A#4
+    { note: 523.25, duration: 1.2 },  // C5 (very long whistle)
+    { note: 0, duration: 0.4 },       // Rest
+    { note: 493.88, duration: 0.8 },  // B4
+    { note: 440.00, duration: 0.6 },  // A4
+    { note: 392.00, duration: 1.0 },  // G4 (long, low)
+    { note: 0, duration: 0.6 },       // Rest
+    { note: 349.23, duration: 0.8 },  // F4 (lower, darker)
+    { note: 392.00, duration: 0.4 },  // G4
+    { note: 440.00, duration: 1.4 },  // A4 (very long, haunting)
+    { note: 0, duration: 0.8 }        // Long rest
+];
+
+function playNote(frequency, duration) {
+    if (!audioContext || frequency === 0) return; // Skip rests
+    
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+    
+    // Create whistling sound with sine wave
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    
+    // Add slight vibrato for more realistic whistle
+    const vibrato = audioContext.createOscillator();
+    const vibratoGain = audioContext.createGain();
+    vibrato.frequency.setValueAtTime(5, audioContext.currentTime); // 5Hz vibrato
+    vibratoGain.gain.setValueAtTime(8, audioContext.currentTime); // Subtle pitch variation
+    
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(osc.frequency);
+    
+    // Low-pass filter for softer, more distant whistle sound
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, audioContext.currentTime);
+    filter.Q.setValueAtTime(1, audioContext.currentTime);
+    
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    // Slow attack and release for wind-like whistle
+    gain.gain.setValueAtTime(0, audioContext.currentTime);
+    gain.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.1);
+    gain.gain.linearRampToValueAtTime(0.12, audioContext.currentTime + duration - 0.2);
+    gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + duration);
+    
+    vibrato.start(audioContext.currentTime);
+    osc.start(audioContext.currentTime);
+    
+    vibrato.stop(audioContext.currentTime + duration);
+    osc.stop(audioContext.currentTime + duration);
+}
+
+function playMelody() {
+    if (!musicPlaying) return;
+    
+    const currentNote = melody[currentNoteIndex];
+    playNote(currentNote.note, currentNote.duration);
+    
+    currentNoteIndex = (currentNoteIndex + 1) % melody.length;
+    
+    // Schedule next note
+    melodyInterval = setTimeout(() => {
+        playMelody();
+    }, currentNote.duration * 1000);
+}
+
+function startMusic() {
     // Create audio context on user interaction
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -835,76 +913,14 @@ function createSpookyMusic() {
         audioContext.resume();
     }
     
-    // Clear any existing oscillators
-    stopSpookyMusic();
-    
-    // Create multiple oscillators for richer sound
-    const frequencies = [110, 165, 220]; // A2, E3, A3 - spooky minor chord
-    
-    frequencies.forEach((freq, index) => {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
-        
-        // Different volumes for each note
-        const volume = index === 0 ? 0.15 : 0.08;
-        gain.gain.setValueAtTime(0, audioContext.currentTime);
-        gain.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 1);
-        
-        osc.start();
-        
-        oscillators.push(osc);
-        gainNodes.push(gain);
-    });
-    
-    // Create pulsing/breathing effect
-    let pulseUp = true;
-    pulseInterval = setInterval(() => {
-        if (musicPlaying && gainNodes.length > 0) {
-            const now = audioContext.currentTime;
-            gainNodes.forEach((gain, index) => {
-                const baseVolume = index === 0 ? 0.15 : 0.08;
-                const targetVolume = pulseUp ? baseVolume * 1.3 : baseVolume * 0.7;
-                
-                gain.gain.cancelScheduledValues(now);
-                gain.gain.setValueAtTime(gain.gain.value, now);
-                gain.gain.linearRampToValueAtTime(targetVolume, now + 1.5);
-            });
-            pulseUp = !pulseUp;
-        }
-    }, 1500);
+    currentNoteIndex = 0;
+    playMelody();
 }
 
-function stopSpookyMusic() {
-    if (pulseInterval) {
-        clearInterval(pulseInterval);
-        pulseInterval = null;
-    }
-    
-    if (oscillators.length > 0 && audioContext) {
-        const now = audioContext.currentTime;
-        gainNodes.forEach(gain => {
-            gain.gain.cancelScheduledValues(now);
-            gain.gain.setValueAtTime(gain.gain.value, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.5);
-        });
-        
-        setTimeout(() => {
-            oscillators.forEach(osc => {
-                try {
-                    osc.stop();
-                } catch (e) {
-                    // Already stopped
-                }
-            });
-            oscillators = [];
-            gainNodes = [];
-        }, 500);
+function stopMusic() {
+    if (melodyInterval) {
+        clearTimeout(melodyInterval);
+        melodyInterval = null;
     }
 }
 
@@ -912,14 +928,55 @@ musicBtn.addEventListener('click', () => {
     musicPlaying = !musicPlaying;
     
     if (musicPlaying) {
-        createSpookyMusic();
+        startMusic();
         musicBtn.textContent = '🔇 Music Off';
         musicBtn.style.background = '#ff6b6b';
     } else {
-        stopSpookyMusic();
+        stopMusic();
         musicBtn.textContent = '🔊 Music On';
         musicBtn.style.background = '#8a2be2';
     }
+});
+
+// Death sound effect
+function playDeathSound() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+    
+    // Create a descending "whoosh" sound
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.type = 'sawtooth';
+    
+    // Descending pitch for "death" effect
+    const now = audioContext.currentTime;
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    
+    // Quick fade out
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+}
+
+// Start popup
+const startPopup = document.getElementById('startPopup');
+const startBtn = document.getElementById('startBtn');
+
+startBtn.addEventListener('click', () => {
+    startPopup.classList.add('hidden');
+    gamePaused = false;
 });
 
 // Initialize and start
