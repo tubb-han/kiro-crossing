@@ -17,7 +17,10 @@ let gameState = {
     won: false,
     showingDeath: false,
     deathTimer: 0,
-    furthestRow: 13
+    furthestRow: 13,
+    deathAnimationProgress: 0,
+    gameOverFadeProgress: 0,
+    showingGameOverAnimation: false
 };
 
 // Player (Ghost)
@@ -196,10 +199,11 @@ function checkGoalReached() {
     // Hit top but not in goal zone
     gameState.lives--;
     gameState.showingDeath = true;
-    gameState.deathTimer = 30; // Show skull for ~0.5 seconds at 60fps
+    gameState.deathTimer = 30; // Show animation for ~0.5 seconds at 60fps
     if (gameState.lives <= 0) {
-        gameState.gameOver = true;
-        gameState.showingDeath = false;
+        // Don't set gameOver immediately, let animation play
+        gameState.deathTimer = 60; // Longer animation for final death
+        gameState.showingGameOverAnimation = true;
     }
 }
 
@@ -213,11 +217,31 @@ function resetPlayerPosition() {
 function update() {
     if (gameState.gameOver || gameState.won) return;
     
-    // Handle death animation
+    // Handle game over animation (final death)
+    if (gameState.showingGameOverAnimation) {
+        gameState.deathTimer--;
+        gameState.deathAnimationProgress++;
+        
+        // Start fading in game over screen after ghost floats for a bit
+        if (gameState.deathTimer < 30) {
+            gameState.gameOverFadeProgress++;
+        }
+        
+        if (gameState.deathTimer <= 0) {
+            gameState.gameOver = true;
+            gameState.showingDeath = false;
+            gameState.showingGameOverAnimation = false;
+        }
+        return;
+    }
+    
+    // Handle death animation (not final death)
     if (gameState.showingDeath) {
         gameState.deathTimer--;
+        gameState.deathAnimationProgress++;
         if (gameState.deathTimer <= 0) {
             gameState.showingDeath = false;
+            gameState.deathAnimationProgress = 0;
             resetPlayerPosition();
         }
         return;
@@ -253,10 +277,11 @@ function checkCollisions() {
                 // Collision detected
                 gameState.lives--;
                 gameState.showingDeath = true;
-                gameState.deathTimer = 30; // Show skull for ~0.5 seconds at 60fps
+                gameState.deathTimer = 30; // Show animation for ~0.5 seconds at 60fps
                 if (gameState.lives <= 0) {
-                    gameState.gameOver = true;
-                    gameState.showingDeath = false;
+                    // Don't set gameOver immediately, let animation play
+                    gameState.deathTimer = 60; // Longer animation for final death
+                    gameState.showingGameOverAnimation = true;
                 }
                 return;
             }
@@ -522,47 +547,80 @@ function draw() {
         }
     });
     
-    // Draw player (ghost or skull if dead)
-    if (gameState.showingDeath) {
-        // Draw skull
+    // Draw player (ghost floating away if dead, normal ghost otherwise)
+    if (gameState.showingDeath || gameState.showingGameOverAnimation) {
+        // Floating away animation
+        const maxFrames = gameState.showingGameOverAnimation ? 60 : 30;
+        const progress = Math.min(gameState.deathAnimationProgress / maxFrames, 1); // 0 to 1
         const centerX = player.x * TILE_SIZE + TILE_SIZE / 2;
         const centerY = player.y * TILE_SIZE + TILE_SIZE / 2;
         
-        // Skull head
+        // Float upward (more for final death)
+        const maxFloat = gameState.showingGameOverAnimation ? 150 : 60;
+        const floatOffset = progress * maxFloat;
+        const currentY = centerY - floatOffset;
+        
+        // Fade out (opacity from 1 to 0) - slower fade for game over
+        const opacity = gameState.showingGameOverAnimation ? 
+            Math.max(1 - (progress * 0.7), 0.3) : // Keep more visible during game over
+            1 - progress;
+        
+        // Slight wave motion as it floats
+        const waveOffset = Math.sin(progress * Math.PI * 3) * 5;
+        
+        // Draw fading ghost with glow
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        
+        // Ethereal glow effect
+        ctx.shadowBlur = 25 * opacity;
+        ctx.shadowColor = '#ffffff';
+        
+        // Ghost body
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(centerX, centerY - 5, 18, 0, Math.PI * 2);
+        ctx.arc(
+            centerX + waveOffset,
+            currentY,
+            player.size / 2,
+            0,
+            Math.PI * 2
+        );
         ctx.fill();
         
-        // Skull jaw
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 8, 12, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Eye sockets
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(centerX - 7, centerY - 8, 5, 0, Math.PI * 2);
-        ctx.arc(centerX + 7, centerY - 8, 5, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Nose hole
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(centerX - 3, centerY + 4);
-        ctx.lineTo(centerX + 3, centerY + 4);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Teeth
+        // Draw X eyes (dead)
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 2;
-        for (let i = -2; i <= 2; i++) {
-            ctx.beginPath();
-            ctx.moveTo(centerX + i * 5, centerY + 8);
-            ctx.lineTo(centerX + i * 5, centerY + 12);
-            ctx.stroke();
+        
+        // Left X eye
+        ctx.beginPath();
+        ctx.moveTo(centerX + waveOffset - 12, currentY - 8);
+        ctx.lineTo(centerX + waveOffset - 4, currentY - 2);
+        ctx.moveTo(centerX + waveOffset - 12, currentY - 2);
+        ctx.lineTo(centerX + waveOffset - 4, currentY - 8);
+        ctx.stroke();
+        
+        // Right X eye
+        ctx.beginPath();
+        ctx.moveTo(centerX + waveOffset + 4, currentY - 8);
+        ctx.lineTo(centerX + waveOffset + 12, currentY - 2);
+        ctx.moveTo(centerX + waveOffset + 4, currentY - 2);
+        ctx.lineTo(centerX + waveOffset + 12, currentY - 8);
+        ctx.stroke();
+        
+        // Wavy tail effect (ghost trail)
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + (opacity * 0.5) + ')';
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            const waveY = currentY + 15 + i * 8;
+            const waveX = centerX + waveOffset + Math.sin(progress * Math.PI * 4 + i) * 8;
+            const waveSize = 8 - i * 2;
+            ctx.arc(waveX, waveY, waveSize, 0, Math.PI * 2);
         }
+        ctx.fill();
+        
+        ctx.restore();
     } else {
         // Draw ghost
         ctx.fillStyle = player.color;
@@ -588,20 +646,136 @@ function draw() {
     }
     
     // Draw game over or win message
-    if (gameState.gameOver) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height / 2 - 50, canvas.width, 100);
+    if (gameState.gameOver || gameState.showingGameOverAnimation) {
+        // Calculate fade progress (0 to 1)
+        const fadeProgress = Math.min(gameState.gameOverFadeProgress / 30, 1);
+        
+        // Only draw if there's some fade progress
+        if (fadeProgress > 0) {
+            ctx.save();
+            ctx.globalAlpha = fadeProgress;
+            
+            // Dark overlay
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            ctx.fillRect(0, canvas.height / 2 - 120, canvas.width, 240);
+        
+        // Draw large skull
+        const skullX = canvas.width / 2;
+        const skullY = canvas.height / 2 - 40;
+        const skullSize = 50;
+        
+        // Skull head with glow
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff0000';
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(skullX, skullY, skullSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Skull jaw
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(skullX, skullY + 25, 35, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye sockets with red glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ff0000';
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(skullX - 20, skullY - 10, 12, 0, Math.PI * 2);
+        ctx.arc(skullX + 20, skullY - 10, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Red glowing eyes
         ctx.fillStyle = '#ff0000';
-        ctx.font = '48px Arial';
+        ctx.beginPath();
+        ctx.arc(skullX - 20, skullY - 10, 6, 0, Math.PI * 2);
+        ctx.arc(skullX + 20, skullY - 10, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Nose hole
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(skullX, skullY + 5);
+        ctx.lineTo(skullX - 8, skullY + 15);
+        ctx.lineTo(skullX + 8, skullY + 15);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Teeth
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        for (let i = -3; i <= 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(skullX + i * 10, skullY + 25);
+            ctx.lineTo(skullX + i * 10, skullY + 35);
+            ctx.stroke();
+        }
+        
+        // GAME OVER text with red glow
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff0000';
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 56px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 + 80);
+        ctx.shadowBlur = 0;
+        
+        // Subtitle
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.fillText('Press Restart to try again', canvas.width / 2, canvas.height / 2 + 110);
+        
+            ctx.restore();
+        }
     } else if (gameState.won) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height / 2 - 50, canvas.width, 100);
+        // Dark overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(0, canvas.height / 2 - 120, canvas.width, 240);
+        
+        // Draw trophy/star
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2 - 40;
+        
+        // Glowing star
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#00ff00';
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+            const x = centerX + Math.cos(angle) * 40;
+            const y = centerY + Math.sin(angle) * 40;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+            const innerAngle = angle + (2 * Math.PI) / 10;
+            const innerX = centerX + Math.cos(innerAngle) * 18;
+            const innerY = centerY + Math.sin(innerAngle) * 18;
+            ctx.lineTo(innerX, innerY);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // YOU WIN text with green glow
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#00ff00';
         ctx.fillStyle = '#00ff00';
-        ctx.font = '48px Arial';
+        ctx.font = 'bold 56px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 + 80);
+        ctx.shadowBlur = 0;
+        
+        // Subtitle
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.fillText('All goals reached!', canvas.width / 2, canvas.height / 2 + 110);
     }
     
     // Update UI
@@ -632,11 +806,83 @@ document.getElementById('restartBtn').addEventListener('click', () => {
         won: false,
         showingDeath: false,
         deathTimer: 0,
-        furthestRow: 13
+        furthestRow: 13,
+        deathAnimationProgress: 0,
+        gameOverFadeProgress: 0,
+        showingGameOverAnimation: false
     };
     goals.forEach(g => g.reached = false);
     resetPlayerPosition();
     initObstacles();
+});
+
+// Music control
+const bgMusic = document.getElementById('bgMusic');
+const musicBtn = document.getElementById('musicBtn');
+let musicPlaying = false;
+
+// Create a simple spooky background music using Web Audio API
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let oscillator = null;
+let gainNode = null;
+
+function createSpookyMusic() {
+    if (oscillator) return; // Already playing
+    
+    // Create oscillator for eerie tone
+    oscillator = audioContext.createOscillator();
+    gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Set to a low, eerie frequency
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(110, audioContext.currentTime); // Low A note
+    
+    // Fade in and out for spooky effect
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 2);
+    
+    oscillator.start();
+    
+    // Create pulsing effect
+    setInterval(() => {
+        if (musicPlaying && gainNode) {
+            const now = audioContext.currentTime;
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0.15, now + 1);
+            gainNode.gain.linearRampToValueAtTime(0.05, now + 2);
+        }
+    }, 2000);
+}
+
+function stopSpookyMusic() {
+    if (oscillator) {
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+        setTimeout(() => {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+                gainNode = null;
+            }
+        }, 500);
+    }
+}
+
+musicBtn.addEventListener('click', () => {
+    musicPlaying = !musicPlaying;
+    
+    if (musicPlaying) {
+        createSpookyMusic();
+        musicBtn.textContent = '🔇 Music Off';
+        musicBtn.style.background = '#ff6b6b';
+    } else {
+        stopSpookyMusic();
+        musicBtn.textContent = '🔊 Music On';
+        musicBtn.style.background = '#8a2be2';
+    }
 });
 
 // Initialize and start

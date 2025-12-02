@@ -6,64 +6,269 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #1a0033, #330066);
+    background: linear-gradient(180deg, #0a0015 0%, #1a0033 50%, #2d1b4e 100%);
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    height: 100vh;
     color: #fff;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    padding: 10px;
 }
 
 .game-container {
     text-align: center;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
     border-radius: 15px;
-    box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+    box-shadow: 0 0 50px rgba(138, 43, 226, 0.6), 0 0 100px rgba(255, 0, 255, 0.3);
+    position: relative;
+    z-index: 10;
+    border: 2px solid rgba(138, 43, 226, 0.4);
+    max-width: 95vw;
+    margin: auto;
 }
 
 h1 {
-    margin-bottom: 15px;
-    font-size: 2.5em;
-    text-shadow: 0 0 10px #8a2be2;
+    margin-bottom: 10px;
+    font-size: clamp(1.5em, 4vw, 2.5em);
+    text-shadow: 0 0 20px #8a2be2, 0 0 40px #ff00ff;
+    animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+    from {
+        text-shadow: 0 0 20px #8a2be2, 0 0 40px #ff00ff;
+    }
+    to {
+        text-shadow: 0 0 30px #8a2be2, 0 0 60px #ff00ff, 0 0 80px #8a2be2;
+    }
 }
 
 .info {
     display: flex;
     justify-content: space-around;
-    margin-bottom: 15px;
-    font-size: 1.2em;
+    margin-bottom: 10px;
+    font-size: clamp(0.9em, 2vw, 1.2em);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Canvas Frame */
+.canvas-frame {
+    position: relative;
+    display: inline-block;
+    padding: 10px;
+    background: linear-gradient(145deg, #2d1b4e, #1a0033);
+    border-radius: 10px;
+    box-shadow: 
+        inset 0 0 20px rgba(0, 0, 0, 0.8),
+        0 0 30px rgba(138, 43, 226, 0.5);
+    max-width: 100%;
+}
+
+.canvas-frame::before,
+.canvas-frame::after {
+    content: '🕷️';
+    position: absolute;
+    font-size: 2em;
+    animation: swing 3s ease-in-out infinite;
+}
+
+.canvas-frame::before {
+    top: -10px;
+    left: 20px;
+}
+
+.canvas-frame::after {
+    top: -10px;
+    right: 20px;
+    animation-delay: 1.5s;
+}
+
+@keyframes swing {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
 }
 
 #gameCanvas {
     border: 3px solid #8a2be2;
     background: #1a1a2e;
     display: block;
-    margin: 0 auto;
-    box-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.5);
+    border-radius: 5px;
+    max-width: 100%;
+    height: auto;
 }
 
 .controls {
-    margin-top: 15px;
+    margin-top: 10px;
 }
 
 .controls p {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #ccc;
+    font-size: clamp(0.8em, 2vw, 1em);
 }
 
 button {
     background: #8a2be2;
     color: white;
     border: none;
-    padding: 10px 20px;
-    font-size: 1em;
+    padding: 8px 16px;
+    margin: 5px;
+    font-size: clamp(0.8em, 2vw, 1em);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
 }
 
 button:hover {
     background: #9d4edd;
     transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Haunted House Background */
+.haunted-house {
+    position: fixed;
+    top: 5vh;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    z-index: 1;
+    opacity: 0.2;
+}
+
+@media (max-width: 768px) {
+    .haunted-house {
+        display: none;
+    }
+}
+
+.house-roof {
+    width: 0;
+    height: 0;
+    border-left: 150px solid transparent;
+    border-right: 150px solid transparent;
+    border-bottom: 100px solid #2d1b4e;
+    position: relative;
+}
+
+.house-body {
+    width: 300px;
+    height: 200px;
+    background: linear-gradient(180deg, #1a0033, #0a0015);
+    position: relative;
+    border: 3px solid #2d1b4e;
+}
+
+.window {
+    position: absolute;
+    width: 60px;
+    height: 80px;
+    background: #ffaa00;
+    top: 50px;
+    border: 3px solid #8b4513;
+    box-shadow: 0 0 30px rgba(255, 170, 0, 0.6);
+}
+
+.left-window {
+    left: 40px;
+}
+
+.right-window {
+    right: 40px;
+}
+
+.window-glow {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 170, 0, 0.8), transparent);
+    animation: windowFlicker 3s ease-in-out infinite;
+}
+
+@keyframes windowFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Floating Ghosts */
+.floating-ghost {
+    position: fixed;
+    font-size: 2em;
+    z-index: 5;
+    animation: float 6s ease-in-out infinite;
+    opacity: 0.3;
+}
+
+.ghost-1 {
+    top: 15%;
+    left: 5%;
+    animation-delay: 0s;
+}
+
+.ghost-2 {
+    top: 25%;
+    right: 5%;
+    animation-delay: 3s;
+}
+
+@media (max-width: 768px) {
+    .floating-ghost {
+        font-size: 1.5em;
+        opacity: 0.2;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px) translateX(0px);
+    }
+    25% {
+        transform: translateY(-20px) translateX(10px);
+    }
+    50% {
+        transform: translateY(0px) translateX(20px);
+    }
+    75% {
+        transform: translateY(-20px) translateX(10px);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-height: 900px) {
+    .game-container {
+        padding: 10px;
+    }
+    
+    h1 {
+        margin-bottom: 5px;
+    }
+    
+    .info {
+        margin-bottom: 5px;
+    }
+    
+    .canvas-frame {
+        padding: 8px;
+    }
+    
+    .controls {
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 650px) {
+    .canvas-frame::before,
+    .canvas-frame::after {
+        font-size: 1.5em;
+    }
 }
