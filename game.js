@@ -817,56 +817,93 @@ document.getElementById('restartBtn').addEventListener('click', () => {
 });
 
 // Music control
-const bgMusic = document.getElementById('bgMusic');
 const musicBtn = document.getElementById('musicBtn');
 let musicPlaying = false;
-
-// Create a simple spooky background music using Web Audio API
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-let oscillator = null;
-let gainNode = null;
+let audioContext = null;
+let oscillators = [];
+let gainNodes = [];
+let pulseInterval = null;
 
 function createSpookyMusic() {
-    if (oscillator) return; // Already playing
+    // Create audio context on user interaction
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
     
-    // Create oscillator for eerie tone
-    oscillator = audioContext.createOscillator();
-    gainNode = audioContext.createGain();
+    // Resume context if suspended (required by browsers)
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    // Clear any existing oscillators
+    stopSpookyMusic();
     
-    // Set to a low, eerie frequency
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(110, audioContext.currentTime); // Low A note
+    // Create multiple oscillators for richer sound
+    const frequencies = [110, 165, 220]; // A2, E3, A3 - spooky minor chord
     
-    // Fade in and out for spooky effect
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 2);
+    frequencies.forEach((freq, index) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        
+        // Different volumes for each note
+        const volume = index === 0 ? 0.15 : 0.08;
+        gain.gain.setValueAtTime(0, audioContext.currentTime);
+        gain.gain.linearRampToValueAtTime(volume, audioContext.currentTime + 1);
+        
+        osc.start();
+        
+        oscillators.push(osc);
+        gainNodes.push(gain);
+    });
     
-    oscillator.start();
-    
-    // Create pulsing effect
-    setInterval(() => {
-        if (musicPlaying && gainNode) {
+    // Create pulsing/breathing effect
+    let pulseUp = true;
+    pulseInterval = setInterval(() => {
+        if (musicPlaying && gainNodes.length > 0) {
             const now = audioContext.currentTime;
-            gainNode.gain.cancelScheduledValues(now);
-            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-            gainNode.gain.linearRampToValueAtTime(0.15, now + 1);
-            gainNode.gain.linearRampToValueAtTime(0.05, now + 2);
+            gainNodes.forEach((gain, index) => {
+                const baseVolume = index === 0 ? 0.15 : 0.08;
+                const targetVolume = pulseUp ? baseVolume * 1.3 : baseVolume * 0.7;
+                
+                gain.gain.cancelScheduledValues(now);
+                gain.gain.setValueAtTime(gain.gain.value, now);
+                gain.gain.linearRampToValueAtTime(targetVolume, now + 1.5);
+            });
+            pulseUp = !pulseUp;
         }
-    }, 2000);
+    }, 1500);
 }
 
 function stopSpookyMusic() {
-    if (oscillator) {
-        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+    if (pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
+    }
+    
+    if (oscillators.length > 0 && audioContext) {
+        const now = audioContext.currentTime;
+        gainNodes.forEach(gain => {
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        });
+        
         setTimeout(() => {
-            if (oscillator) {
-                oscillator.stop();
-                oscillator = null;
-                gainNode = null;
-            }
+            oscillators.forEach(osc => {
+                try {
+                    osc.stop();
+                } catch (e) {
+                    // Already stopped
+                }
+            });
+            oscillators = [];
+            gainNodes = [];
         }, 500);
     }
 }
