@@ -297,13 +297,64 @@ button:active {
     }
 }
 
-/* Responsive adjustments */
-@media (max-height: 900px) {
+/* Desktop/Laptop optimizations */
+@media (min-width: 769px) {
+    body {
+        padding: 5px;
+    }
+    
     .game-container {
         padding: 10px;
+        max-height: 96vh;
     }
     
     h1 {
+        font-size: 2em;
+        margin-bottom: 8px;
+    }
+    
+    .info {
+        font-size: 1em;
+        margin-bottom: 8px;
+    }
+    
+    .canvas-frame {
+        padding: 8px;
+    }
+    
+    .canvas-frame::before,
+    .canvas-frame::after {
+        font-size: 1.5em;
+    }
+    
+    .controls {
+        margin-top: 8px;
+    }
+    
+    .controls p {
+        margin-bottom: 6px;
+        font-size: 0.9em;
+    }
+    
+    button {
+        padding: 8px 16px;
+        font-size: 0.9em;
+    }
+    
+    .haunted-house {
+        transform: translateX(-50%) scale(0.7);
+        opacity: 0.25;
+    }
+}
+
+/* Responsive adjustments for shorter screens */
+@media (max-height: 900px) and (min-width: 769px) {
+    .game-container {
+        padding: 8px;
+    }
+    
+    h1 {
+        font-size: 1.8em;
         margin-bottom: 5px;
     }
     
@@ -312,11 +363,11 @@ button:active {
     }
     
     .canvas-frame {
-        padding: 8px;
+        padding: 6px;
     }
     
     .controls {
-        margin-top: 8px;
+        margin-top: 6px;
     }
 }
 
