@@ -1,3 +1,12 @@
+// Prevent scrolling on mobile
+document.body.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
