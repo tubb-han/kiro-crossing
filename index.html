@@ -54,9 +54,23 @@
         </div>
         
         <div class="controls">
-            <p>Use Arrow Keys or WASD to move</p>
+            <p class="desktop-only">Use Arrow Keys or WASD to move</p>
+            <p class="mobile-only">Tap buttons or swipe to move</p>
             <button id="restartBtn">🎮 Restart Game</button>
             <button id="musicBtn">🔊 Music On</button>
+        </div>
+        
+        <!-- Touch Controls for Mobile -->
+        <div class="touch-controls">
+            <div class="dpad">
+                <button class="dpad-btn up" id="btnUp">▲</button>
+                <div class="dpad-middle">
+                    <button class="dpad-btn left" id="btnLeft">◀</button>
+                    <div class="dpad-center"></div>
+                    <button class="dpad-btn right" id="btnRight">▶</button>
+                </div>
+                <button class="dpad-btn down" id="btnDown">▼</button>
+            </div>
         </div>
     </div>
     

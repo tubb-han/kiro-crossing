@@ -148,40 +148,105 @@ document.addEventListener('keydown', (e) => {
     handleInput();
 });
 
-function handleInput() {
+function movePlayer(direction) {
     if (gameState.gameOver || gameState.won || gameState.showingDeath) return;
     
-    const oldX = player.x;
-    const oldY = player.y;
-    
-    if (keys['ArrowUp'] || keys['w'] || keys['W']) {
-        player.y = Math.max(0, player.y - 1);
-        keys['ArrowUp'] = keys['w'] = keys['W'] = false;
-        
-        // Award points for moving forward
-        if (player.y < gameState.furthestRow) {
-            gameState.score += 5;
-            gameState.furthestRow = player.y;
-        }
-    }
-    if (keys['ArrowDown'] || keys['s'] || keys['S']) {
-        player.y = Math.min(ROWS - 1, player.y + 1);
-        keys['ArrowDown'] = keys['s'] = keys['S'] = false;
-    }
-    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-        player.x = player.x - 1;
-        if (player.x < 0) player.x = COLS - 1;
-        keys['ArrowLeft'] = keys['a'] = keys['A'] = false;
-    }
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-        player.x = player.x + 1;
-        if (player.x >= COLS) player.x = 0;
-        keys['ArrowRight'] = keys['d'] = keys['D'] = false;
+    switch(direction) {
+        case 'up':
+            player.y = Math.max(0, player.y - 1);
+            // Award points for moving forward
+            if (player.y < gameState.furthestRow) {
+                gameState.score += 5;
+                gameState.furthestRow = player.y;
+            }
+            break;
+        case 'down':
+            player.y = Math.min(ROWS - 1, player.y + 1);
+            break;
+        case 'left':
+            player.x = player.x - 1;
+            if (player.x < 0) player.x = COLS - 1;
+            break;
+        case 'right':
+            player.x = player.x + 1;
+            if (player.x >= COLS) player.x = 0;
+            break;
     }
     
     // Check if reached goal
     if (player.y === 0) {
         checkGoalReached();
+    }
+}
+
+function handleInput() {
+    if (gameState.gameOver || gameState.won || gameState.showingDeath) return;
+    
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+        movePlayer('up');
+        keys['ArrowUp'] = keys['w'] = keys['W'] = false;
+    }
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+        movePlayer('down');
+        keys['ArrowDown'] = keys['s'] = keys['S'] = false;
+    }
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        movePlayer('left');
+        keys['ArrowLeft'] = keys['a'] = keys['A'] = false;
+    }
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        movePlayer('right');
+        keys['ArrowRight'] = keys['d'] = keys['D'] = false;
+    }
+}
+
+// Touch Controls
+document.getElementById('btnUp')?.addEventListener('click', () => movePlayer('up'));
+document.getElementById('btnDown')?.addEventListener('click', () => movePlayer('down'));
+document.getElementById('btnLeft')?.addEventListener('click', () => movePlayer('left'));
+document.getElementById('btnRight')?.addEventListener('click', () => movePlayer('right'));
+
+// Swipe gesture support
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+}, false);
+
+canvas.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipe();
+}, false);
+
+function handleSwipe() {
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    const minSwipeDistance = 30;
+    
+    // Determine if horizontal or vertical swipe
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (Math.abs(deltaX) > minSwipeDistance) {
+            if (deltaX > 0) {
+                movePlayer('right');
+            } else {
+                movePlayer('left');
+            }
+        }
+    } else {
+        // Vertical swipe
+        if (Math.abs(deltaY) > minSwipeDistance) {
+            if (deltaY > 0) {
+                movePlayer('down');
+            } else {
+                movePlayer('up');
+            }
+        }
     }
 }
 
