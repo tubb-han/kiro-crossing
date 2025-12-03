@@ -375,66 +375,8 @@ button:active {
     }
 }
 
-/* Touch Controls */
-.touch-controls {
-    display: none;
-    margin-top: 20px;
-    justify-content: center;
-}
-
-.dpad {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-}
-
-.dpad-middle {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-
-.dpad-center {
-    width: 60px;
-    height: 60px;
-    background: rgba(138, 43, 226, 0.2);
-    border-radius: 50%;
-    border: 2px solid rgba(138, 43, 226, 0.4);
-}
-
-.dpad-btn {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(145deg, #8a2be2, #6a1bb2);
-    color: white;
-    border: 3px solid #9d4edd;
-    font-size: 24px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.1s;
-    box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.dpad-btn:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.6);
-    background: linear-gradient(145deg, #9d4edd, #8a2be2);
-}
-
-.dpad-btn.up, .dpad-btn.down {
-    width: 80px;
-}
-
-/* Show touch controls on mobile */
+/* Mobile/Desktop text visibility */
 @media (max-width: 768px), (hover: none) {
-    .touch-controls {
-        display: flex;
-    }
-    
     .desktop-only {
         display: none;
     }
@@ -452,4 +394,14 @@ button:active {
     .desktop-only {
         display: block;
     }
+}
+
+/* Prevent pull-to-refresh and overscroll on mobile */
+body {
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+}
+
+#gameCanvas {
+    touch-action: none;
 }

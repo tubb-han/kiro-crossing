@@ -200,12 +200,6 @@ function handleInput() {
     }
 }
 
-// Touch Controls
-document.getElementById('btnUp')?.addEventListener('click', () => movePlayer('up'));
-document.getElementById('btnDown')?.addEventListener('click', () => movePlayer('down'));
-document.getElementById('btnLeft')?.addEventListener('click', () => movePlayer('left'));
-document.getElementById('btnRight')?.addEventListener('click', () => movePlayer('right'));
-
 // Swipe gesture support
 let touchStartX = 0;
 let touchStartY = 0;
@@ -213,15 +207,21 @@ let touchEndX = 0;
 let touchEndY = 0;
 
 canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Prevent scrolling
     touchStartX = e.changedTouches[0].screenX;
     touchStartY = e.changedTouches[0].screenY;
-}, false);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Prevent scrolling during swipe
+}, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
+    e.preventDefault(); // Prevent scrolling
     touchEndX = e.changedTouches[0].screenX;
     touchEndY = e.changedTouches[0].screenY;
     handleSwipe();
-}, false);
+}, { passive: false });
 
 function handleSwipe() {
     const deltaX = touchEndX - touchStartX;
