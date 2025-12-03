@@ -43,6 +43,49 @@ body {
     overflow-x: hidden;
 }
 
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    body {
+        padding: 2px;
+    }
+    
+    .game-container {
+        padding: 5px;
+        max-height: 98vh;
+        border-radius: 10px;
+    }
+    
+    h1 {
+        font-size: 1.5em;
+        margin-bottom: 3px;
+    }
+    
+    .info {
+        font-size: 0.9em;
+        margin-bottom: 3px;
+        gap: 5px;
+    }
+    
+    .canvas-frame {
+        padding: 5px;
+    }
+    
+    .controls {
+        margin-top: 5px;
+    }
+    
+    .controls p {
+        margin-bottom: 3px;
+        font-size: 0.8em;
+    }
+    
+    button {
+        padding: 6px 12px;
+        font-size: 0.85em;
+        margin: 3px;
+    }
+}
+
 h1 {
     margin-bottom: 10px;
     font-size: clamp(1.5em, 4vw, 2.5em);
